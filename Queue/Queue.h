@@ -68,7 +68,7 @@ template <typename T>
 T thread_safe_queue<T>::pop()
 {
 	std::unique_lock<std::mutex> lk(lock_);
-	cv_.wait(lk, []() {return empty(); });
+	cv_.wait(lk, [this]() {return !(this->queue_.empty()); });
 
 	T front = queue_.front();
 	queue_.pop();
