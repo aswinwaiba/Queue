@@ -26,16 +26,46 @@ public:
 
 	SimpleEventProcessor(SimpleEventProcessor&& msep) = default;
 
-	void start() {} //TODO: implement
-	void stop(){} //TODO: implement
+	void start() 
+	{
+		std::lock_guard<std::mutex> lk(mutex_);
+		running_ = true;
+		th_ = std::thread(&SimpleEventProcessor::run, this);
+	} 
 
-	void run() {} //TODO: implement
+	void stop()
+	{
+		std::lock_guard<std::mutex> lk(mutex_);
+		//Clean queue should be configurable
+		while (!q_.empty()) {
+			T&& val = q_.pop();
+			callback_(std::move(val));
+		}
+		running_ = false;
+	} 
+	
+	inline bool is_running()
+	{
+		std::lock_guard<std::mutex> lk(mutex_);
+		return running_;
+	}
+	void run() 
+	{
+		while (is_running() ) {
+			T&& val = q_.pop();
+			callback_(std::move(val));
+		}
+	}
 
 	template <typename U=T, typename std::enable_if<std::is_class<U>::value>::type* = nullptr >
-	void push(T const& val) {}//TODO: implement
+	void push(T const& val) {
+		q_.push(val);
+	}
 
 	template <typename U=T, typename std::enable_if<!std::is_class<U>::value>::type* =nullptr >
-	void push(T val) {}//TODO: implement
+	void push(T val) {
+		q_.push(val);
+	}
 
 
 private:
